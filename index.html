@@ -1,1 +1,309 @@
+```html
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>نظام جرد الصيدلية الذكي - Core Manager</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- SheetJS for Excel handling -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        medical: {
+                            50: '#f0fdfa',
+                            100: '#ccfbf1',
+                            500: '#14b8a6',
+                            600: '#0d9488',
+                            700: '#0f766e',
+                            800: '#115e59',
+                            900: '#134e4a'
+                        }
+                    },
+                    fontFamily: {
+                        cairo: ['Cairo', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Cairo', sans-serif;
+            background-color: #f8fafc;
+        }
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+        @media print {
+            .no-print {
+                display: none !important;
+            }
+            body {
+                background: white;
+                color: black;
+            }
+        }
+        .voice-active-step {
+            border-color: #0d9488 !important;
+            box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.25) !important;
+            background-color: #f0fdfa !important;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col justify-between">
 
+    <div>
+        <header class="bg-gradient-to-r from-medical-900 via-medical-800 to-medical-700 text-white shadow-lg no-print">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+                <div class="flex flex-col md:flex-row justify-between items-center gap-4">
+                    <div class="flex items-center gap-3">
+                        <div class="p-3 bg-white/10 backdrop-blur-md rounded-2xl border border-white/20">
+                            <i class="fa-solid fa-prescription-bottle-medical text-3xl text-teal-300"></i>
+                        </div>
+                        <div>
+                            <h1 class="text-2xl font-black tracking-wide">نظام جرد الصيدلية الذكي</h1>
+                            <p class="text-xs text-teal-100/90 font-medium">إدارة ومطابقة المخزون التلقائية بدعم الباركوود والإدخال الصوتي المتسلسل</p>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-wrap items-center gap-2.5 w-full md:w-auto justify-end">
+                        <button id="voiceBtn" onclick="toggleVoiceAssistant()" class="flex items-center gap-2 bg-teal-500/20 hover:bg-teal-500/30 text-teal-100 border border-teal-400/30 px-3.5 py-2 rounded-xl transition duration-200 text-xs font-semibold">
+                            <i id="micIcon" class="fa-solid fa-microphone text-teal-300"></i>
+                            <span id="micText">الجرد الصوتي التتابعي</span>
+                        </button>
+
+                        <button id="demoBtn" onclick="loadDemoData()" class="flex items-center gap-1.5 bg-teal-400 hover:bg-teal-300 text-medical-900 px-3.5 py-2 rounded-xl font-bold shadow-md transition duration-200 text-xs">
+                            <i class="fa-solid fa-vial"></i>
+                            <span>تحميل شيت تجريبي</span>
+                        </button>
+
+                        <button onclick="confirmReuploadDb()" class="flex items-center gap-1.5 bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 border border-amber-400/30 px-3 py-2 rounded-xl transition duration-200 text-xs font-semibold" title="إعادة رفع قاعدة البيانات بدون مسح الجرد">
+                            <i class="fa-solid fa-rotate"></i>
+                            <span>إعادة رفع قاعدة البيانات</span>
+                        </button>
+
+                        <button onclick="confirmResetAll()" class="flex items-center gap-1.5 bg-red-500/20 hover:bg-red-500/30 text-red-200 border border-red-400/30 px-3 py-2 rounded-xl transition duration-200 text-xs font-semibold" title="تصفير قاعدة البيانات وجميع الأصناف المجرودة">
+                            <i class="fa-solid fa-trash-arrow-up"></i>
+                            <span>Reset (تصفير الكل)</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <main class="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+            <!-- Voice Assistant Banner -->
+            <div id="voiceBanner" class="hidden bg-gradient-to-r from-teal-900 via-slate-900 to-teal-950 text-white p-4 rounded-2xl border border-teal-500/40 shadow-xl relative overflow-hidden transition-all duration-300 no-print">
+                <div class="flex flex-col lg:flex-row items-center justify-between gap-4 relative z-10">
+                    <div class="flex items-center gap-3">
+                        <div class="relative flex h-4 w-4 shrink-0">
+                          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-teal-400 opacity-75"></span>
+                          <span class="relative inline-flex rounded-full h-4 w-4 bg-teal-500"></span>
+                        </div>
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <span class="font-bold text-teal-300">وضع الجرد الصوتي المتسلسل:</span>
+                                <span id="voiceStepIndicator" class="bg-teal-500/30 text-teal-200 text-xs font-bold px-2.5 py-0.5 rounded-full border border-teal-400/30">خطوة 1: انطق الكود/الاسم</span>
+                            </div>
+                            <p id="speechResultText" class="text-xs text-slate-300 mt-1 font-mono dir-ltr text-left">انطق كود الصنف أو اسمه للبدء...</p>
+                        </div>
+                    </div>
+
+                    <!-- Step Tracker Pill -->
+                    <div class="flex items-center gap-1.5 text-xs font-bold bg-slate-800/80 p-1.5 rounded-xl border border-slate-700/80">
+                        <span id="stepBadge1" class="px-2.5 py-1 rounded-lg bg-teal-600 text-white transition">1. كود/اسم الصنف</span>
+                        <i class="fa-solid fa-chevron-left text-slate-500 text-xs"></i>
+                        <span id="stepBadge2" class="px-2.5 py-1 rounded-lg bg-slate-700 text-slate-400 transition">2. عدد العلب</span>
+                        <i class="fa-solid fa-chevron-left text-slate-500 text-xs"></i>
+                        <span id="stepBadge3" class="px-2.5 py-1 rounded-lg bg-slate-700 text-slate-400 transition">3. عدد الوحدات (إدخال تلقائي)</span>
+                    </div>
+
+                    <button onclick="toggleVoiceAssistant()" class="text-slate-400 hover:text-white text-sm bg-slate-800 p-2 rounded-xl border border-slate-700">
+                        <i class="fa-solid fa-xmark"></i> إغلاق
+                    </button>
+                </div>
+            </div>
+
+            <!-- Excel Import Section -->
+            <section class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200/80 no-print">
+                <h2 class="text-base font-bold text-slate-700 mb-3 flex items-center gap-2">
+                    <i class="fa-solid fa-file-excel text-emerald-600 text-lg"></i>
+                    استيراد شيت الأكسيل (يدعم العربية والإنجليزية)
+                </h2>
+                <div class="flex flex-col md:flex-row items-center gap-4">
+                    <label class="w-full md:w-auto flex-1 cursor-pointer">
+                        <div class="border-2 border-dashed border-slate-300 hover:border-medical-500 bg-slate-50 hover:bg-medical-50/50 transition rounded-2xl p-4 text-center">
+                            <i class="fa-solid fa-cloud-arrow-up text-2xl text-medical-600 mb-1"></i>
+                            <span class="block text-sm text-slate-700 font-bold">اضغط لاختيار شيت الإكسيل (xlsx, xls, csv)</span>
+                            <span class="text-xs text-slate-400">الأعمدة المقبولة: Item No - Description - Item Family Code - Qty Per Core - Inventory</span>
+                        </div>
+                        <input type="file" id="excelFileInput" accept=".xlsx, .xls, .csv" class="hidden" onchange="handleFileUpload(event)">
+                    </label>
+                    <div id="uploadStatus" class="hidden text-sm text-emerald-700 font-bold bg-emerald-50 border border-emerald-200 p-3.5 rounded-2xl flex items-center gap-2">
+                        <i class="fa-solid fa-circle-check text-base"></i>
+                        <span id="uploadStatusText">تم تحميل الشيت بنجاح!</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Dashboard Statistics Cards -->
+            <section class="grid grid-cols-2 md:grid-cols-4 gap-4 no-print">
+                <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200/80 flex items-center justify-between">
+                    <div>
+                        <p class="text-xs text-slate-500 font-bold">إجمالي الأصناف</p>
+                        <p id="statTotalItems" class="text-2xl font-black text-slate-800 mt-1">0</p>
+                    </div>
+                    <div class="w-11 h-11 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600 text-lg">
+                        <i class="fa-solid fa-boxes-stacked"></i>
+                    </div>
+                </div>
+
+                <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200/80 flex items-center justify-between">
+                    <div>
+                        <p class="text-xs text-slate-500 font-bold">المجرودة</p>
+                        <p id="statCountedItems" class="text-2xl font-black text-emerald-600 mt-1">0</p>
+                    </div>
+                    <div class="w-11 h-11 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600 text-lg">
+                        <i class="fa-solid fa-list-check"></i>
+                    </div>
+                </div>
+
+                <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200/80 flex items-center justify-between">
+                    <div>
+                        <p class="text-xs text-slate-500 font-bold">أصناف بها عجز</p>
+                        <p id="statDeficitItems" class="text-2xl font-black text-red-600 mt-1">0</p>
+                    </div>
+                    <div class="w-11 h-11 rounded-xl bg-red-50 flex items-center justify-center text-red-600 text-lg">
+                        <i class="fa-solid fa-arrow-down-short-wide"></i>
+                    </div>
+                </div>
+
+                <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200/80 flex items-center justify-between">
+                    <div>
+                        <p class="text-xs text-slate-500 font-bold">أصناف بها زيادة</p>
+                        <p id="statSurplusItems" class="text-2xl font-black text-blue-600 mt-1">0</p>
+                    </div>
+                    <div class="w-11 h-11 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600 text-lg">
+                        <i class="fa-solid fa-arrow-up-wide-short"></i>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Inventory Entry Form -->
+            <section class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200/80 no-print">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-4">
+                    <h2 class="text-base font-bold text-slate-700 flex items-center gap-2">
+                        <i class="fa-solid fa-barcode text-medical-600 text-lg"></i>
+                        إدخال كميات الجرد / مسح الباركوود المباشر
+                    </h2>
+                    <label class="inline-flex items-center cursor-pointer text-xs font-semibold text-slate-600 bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200">
+                        <input type="checkbox" id="autoAddBarcode" checked class="sr-only peer">
+                        <div class="relative w-9 h-5 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-medical-600"></div>
+                        <span class="ms-2 font-bold text-slate-700">تسجيل تلقائي عند استخدام قارئ الباركوود (+1 علبة)</span>
+                    </label>
+                </div>
+
+                <form id="inventoryForm" onsubmit="handleInventorySubmit(event)" class="space-y-4">
+                    <div class="grid grid-cols-1 md:grid-cols-12 gap-3">
+                        
+                        <!-- Item No Search/Select Input (LTR direction for codes) -->
+                        <div class="md:col-span-5 relative">
+                            <label class="block text-xs font-bold text-slate-600 mb-1">Item No / الباركوود / اسم الصنف:</label>
+                            <input type="text" id="inputItemNo" autocomplete="off" required placeholder="امسح الباركوود أو اكتب الكود بالظبط..." 
+                                dir="ltr"
+                                class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-sm font-semibold text-left focus:outline-none focus:ring-2 focus:ring-medical-500 focus:bg-white transition"
+                                oninput="searchAndShowPreview(this.value)"
+                                onkeydown="handleBarcodeEnter(event)">
+                            
+                            <!-- Auto-suggest preview -->
+                            <div id="itemPreviewCard" class="hidden absolute z-20 top-full right-0 left-0 mt-1 bg-white border border-medical-200 rounded-xl p-3 shadow-xl text-xs space-y-1">
+                                <div class="font-bold text-medical-900 text-sm" id="previewDesc">-</div>
+                                <div class="text-slate-500 flex justify-between pt-1">
+                                    <span>العائلة: <strong id="previewFamily" class="text-slate-700">-</strong></span>
+                                    <span>معامل العلبة (Qty/Core): <strong id="previewCore" class="text-medical-700 font-bold">-</strong></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Boxes Qty Input -->
+                        <div class="md:col-span-3">
+                            <label class="block text-xs font-bold text-slate-600 mb-1">عدد العلب الكاملة (Boxes):</label>
+                            <input type="number" id="inputBoxes" min="0" placeholder="0" onfocus="this.select()"
+                                class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 text-sm font-bold text-center focus:outline-none focus:ring-2 focus:ring-medical-500 focus:bg-white transition">
+                        </div>
+
+                        <!-- Units Qty Input -->
+                        <div class="md:col-span-2">
+                            <label class="block text-xs font-bold text-slate-600 mb-1">عدد الشريط/الوحدات (Units):</label>
+                            <input type="number" id="inputUnits" min="0" placeholder="0" onfocus="this.select()"
+                                class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 text-sm font-bold text-center focus:outline-none focus:ring-2 focus:ring-medical-500 focus:bg-white transition">
+                        </div>
+
+                        <!-- Submit Button -->
+                        <div class="md:col-span-2 flex items-end">
+                            <button type="submit" class="w-full bg-medical-700 hover:bg-medical-800 text-white font-bold py-2.5 px-4 rounded-xl transition shadow-md flex items-center justify-center gap-1.5 text-sm">
+                                <i class="fa-solid fa-plus-circle"></i> إضافة للجرد
+                            </button>
+                        </div>
+
+                    </div>
+                </form>
+            </section>
+
+            <!-- Last Added Item Live Tracker Banner -->
+            <section id="lastAddedBanner" class="hidden bg-gradient-to-r from-teal-50 via-emerald-50 to-teal-50 border-2 border-teal-500/50 p-4 rounded-2xl shadow-md no-print transition-all">
+                <div class="flex flex-col sm:flex-row items-center justify-between gap-3">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-2xl bg-teal-600 text-white flex items-center justify-center text-lg font-bold shrink-0 shadow-md">
+                            <i class="fa-solid fa-clock-rotate-left"></i>
+                        </div>
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <span class="bg-teal-700 text-white text-[10px] font-black px-2 py-0.5 rounded-md uppercase">آخر صنف تم إضافته حديثاً</span>
+                                <span id="lastAddedTime" class="text-xs text-slate-500 font-medium"></span>
+                            </div>
+                            <h3 id="lastAddedTitle" class="text-base font-black text-slate-800 mt-0.5">-</h3>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <div class="bg-white px-3.5 py-1.5 rounded-xl border border-teal-200 text-xs text-slate-700 font-bold shadow-sm">
+                            الكمية المجرودة: <span id="lastAddedQty" class="text-teal-700 font-black text-sm">-</span>
+                        </div>
+                        <button id="lastAddedEditBtn" onclick="" class="bg-amber-500 hover:bg-amber-600 text-white px-3.5 py-2 rounded-xl text-xs font-bold transition shadow flex items-center gap-1">
+                            <i class="fa-solid fa-pen-to-square"></i> تعديل الصنف
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Main Inventory Data Table -->
+            <section class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200/80">
+                <div class="flex flex-wrap justify-between items-center gap-3 mb-4 no-print">
+                    <h2 class="text-base font-bold text-slate-700 flex items-center gap-2">
+                        <i class="fa-solid fa-list-ol text-medical-600 text-lg"></i>
+                        جدول الأصناف المجرودة والمطابقة
+                    </h2>
+                    <div class="flex items-center gap-2">
+                        <button onclick="exportToExcel()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold py-2 px-3.5 rounded-xl shadow transition flex items-center gap-1.5">
+                            <i class="fa-solid fa-file-excel"></i> تصدير
