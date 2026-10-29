@@ -1,2 +1,0 @@
-# Inventory-check
-Inventory check
