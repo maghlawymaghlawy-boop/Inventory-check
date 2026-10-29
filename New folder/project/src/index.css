@@ -1,0 +1,72 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-arabic: 'Cairo', 'Tajawal', sans-serif;
+}
+
+* {
+  font-family: var(--font-arabic);
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  background-color: #F4F8FB;
+  color: #0F172A;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* LTR for numeric inputs */
+.ltr-nums {
+  direction: ltr;
+  text-align: right;
+  unicode-bidi: embed;
+}
+
+input[type="number"] {
+  direction: ltr;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #E8F1F8;
+}
+::-webkit-scrollbar-thumb {
+  background: #38BDF8;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #0284C7;
+}
+
+/* Numpad button press effect */
+.numpad-btn {
+  user-select: none;
+  -webkit-user-select: none;
+  transition: all 0.1s ease;
+}
+.numpad-btn:active {
+  transform: scale(0.95);
+  background-color: #0284C7;
+  color: white;
+}
+
+/* Smooth transitions for all interactive elements */
+button, a, .interactive {
+  transition: all 0.2s ease;
+}
+
+/* Hide scrollbar for mobile tab bars */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
